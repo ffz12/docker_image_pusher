@@ -1,1 +1,1 @@
-ubuntu:22.04
+mpioperator/mpi-operator:0.8.2
