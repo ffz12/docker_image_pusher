@@ -1,1 +1,2 @@
-mpioperator/mpi-operator:0.8.2
+nvidia/dcgm-exporter:4.6.1-4.8.4
+vllm/vllm-openai:v0.32.0
