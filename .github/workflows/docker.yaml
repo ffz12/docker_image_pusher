@@ -39,9 +39,18 @@ jobs:
         # remove-codeql: 'true'
         build-mount-path: '/var/lib/docker/'
 
-    - name: Restart docker
-      run: sudo service docker restart
-
+    #- name: Restart docker
+      #run: sudo service docker restart
+    - name: Restart docker (use overlay2 on the big volume)
+      run: |
+        sudo systemctl stop docker docker.socket
+        sudo mkdir -p /etc/docker
+        [ -f /etc/docker/daemon.json ] || echo '{}' | sudo tee /etc/docker/daemon.json >/dev/null
+        sudo jq '.features["containerd-snapshotter"]=false' /etc/docker/daemon.json | sudo tee /tmp/daemon.json >/dev/null
+        sudo mv /tmp/daemon.json /etc/docker/daemon.json
+        sudo systemctl start docker
+        docker info | grep -E "Storage Driver|Docker Root Dir"
+        df -h /var/lib/docker
     - name: Free up disk space complete
       run: |
         echo "Free up disk space complete"
