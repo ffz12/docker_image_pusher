@@ -22,15 +22,20 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Copy multi-arch images to Aliyun
+    - name: Copy amd64 + arm64 to Aliyun
       run: |
         command -v skopeo >/dev/null || { sudo apt-get update && sudo apt-get install -y skopeo; }
         echo "$ALIYUN_REGISTRY_PASSWORD" | skopeo login -u "$ALIYUN_REGISTRY_USER" --password-stdin "$ALIYUN_REGISTRY"
+        echo "$ALIYUN_REGISTRY_PASSWORD" | docker login -u "$ALIYUN_REGISTRY_USER" --password-stdin "$ALIYUN_REGISTRY"
         while IFS= read -r line || [ -n "$line" ]; do
           [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
           image=$(echo "$line" | awk '{print $NF}')
           image="${image%%@*}"
           new_image="$ALIYUN_REGISTRY/$ALIYUN_NAME_SPACE/${image##*/}"
-          echo "copy $image -> $new_image"
-          skopeo copy --all "docker://$image" "docker://$new_image"
+          for arch in amd64 arm64; do
+            echo "copy $image ($arch) -> $new_image-$arch"
+            skopeo copy --override-os linux --override-arch "$arch" \
+              "docker://$image" "docker://$new_image-$arch"
+          done
+          docker buildx imagetools create -t "$new_image" "$new_image-amd64" "$new_image-arm64"
         done < images-multiarch.txt
